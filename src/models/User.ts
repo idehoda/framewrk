@@ -12,7 +12,7 @@ export interface IUserProps {
 const rootUrl = 'http://localhost:3000/users';
 
 // type callback = function that returns nothing
-type Callback = () => void;
+export type Callback = () => void;
 
 export class User {
     public events: Eventing = new Eventing();
