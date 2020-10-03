@@ -1,48 +1,56 @@
-import axios, { AxiosResponse } from 'axios';
+import { Sync } from './Sync';
+import { Eventing } from './Eventing';
+import { Attributes } from './Attributes';
+import { AxiosPromise, AxiosResponse } from 'axios';
 
-interface IUserProps {
+export interface IUserProps {
     name?: string;
     age?: number;
     id?: number;
 };
 
+const rootUrl = 'http://localhost:3000/users';
+
 // type callback = function that returns nothing
 type Callback = () => void;
 
 export class User {
-    events: { [key: string] : Callback[]} = {};
-    constructor(private data: IUserProps){}
-    get (propName: string): (string | number) {
-        return this.data[propName];
+    public events: Eventing = new Eventing();
+    public sync: Sync<IUserProps> = new Sync<IUserProps>(rootUrl);
+    public attributes: Attributes<IUserProps>;
+    constructor(arrributes: IUserProps) {
+        this.attributes = new  Attributes<IUserProps>(arrributes);
     }
-    set (update: IUserProps): void {
-        Object.assign(this.data, update)
+    // return on method on eventing in order to call, eg user.on('event', () => {})
+    get on() {
+        return this.events.on;
     }
-    on(eventName: string, callback: Callback): void {
-        const handlers = this.events[eventName] || [];
-        handlers.push(callback);
-        this.events[eventName] = handlers;
+    get trigger() {
+        return this.events.trigger;
     }
-    trigger(eventName: string): void {
-        const handlers = this.events[eventName];
-        if (!handlers || handlers.length === 0) {
-            return;
-        }
-        handlers.forEach(eventHandler => eventHandler());
+    get get() {
+        return this.attributes.get;
+    }
+    set(update: IUserProps): void {
+        this.attributes.set(update);
+        this.events.trigger('change');
     }
     fetch(): void {
-        axios.get(`http://localhost:3000/users/${this.get('id')}`)
-            .then((response: AxiosResponse): void => {
-                console.log('received!')
-                this.set(response.data);
-            })
+        const id = this.attributes.get('id');
+        if (typeof id !== 'number') {
+            throw new Error('No id found')
+        }
+        this.sync.fetch(id).then((res: AxiosResponse): void => {
+            this.set(res.data);
+        })
+        .catch(err => console.log('error fetching user', err))
     }
     save(): void {
-        const id = this.get('id');
-        if (id) {
-            axios.put(`http://localhost:3000/users/${id}`, this.data)
-        } else {
-            axios.post(`http://localhost:3000/users`, this.data)
-        }
+        const allData = this.attributes.getAll();
+        this.sync.save(allData)
+            .then((res: AxiosResponse) => {
+                this.trigger('saveSuccess')
+            })
+            .catch((err) => this.trigger('saveError'))
     }
 }
