@@ -1,12 +1,18 @@
-import { User } from './models/User';
+import { IUserProps, User } from './models/User';
+import { Collection } from './models/Collection';
+import { UserList } from './views/UserList';
 
-const user = User.buildUser({ id: 1, name: '111', age: 111});
+const users = new Collection('http://localhost:3000/users', 
+    (json: IUserProps) => {
+        return User.buildUser(json);
+    }
+)
 
-// "id": 1,
-// "name": "BBB",
-// "age": 345546
+users.on('change', () => {
+    const root = document.getElementById('root');
+    if (root) {
+        new UserList(root, users).render();
+    }
+})
 
-user.on('change', () => console.log('change event triggered', user));
-user.on('saveSuccess', () => console.log('saveSuccess event triggered', user));
-user.fetch();
-user.save();
+users.fetch();

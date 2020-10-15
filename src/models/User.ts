@@ -1,3 +1,4 @@
+import { Collection } from './Collection';
 import { Eventing } from './Eventing';
 import { Attributes } from './Attributes';
 import { Model } from './Model';
@@ -21,5 +22,15 @@ export class User extends Model<IUserProps> {
             new Eventing(),
             new ApiSync<IUserProps>(rootUrl)
         )
+    }
+    static buildUserCollection(): Collection<User, IUserProps> {
+        return new Collection<User, IUserProps>(
+            rootUrl,
+            (json: IUserProps) => User.buildUser(json)
+        );
+    }
+    setRandomAge(): void {
+        const age = Math.round(Math.random() * 9999);
+        this.set({ age });
     }
 }
